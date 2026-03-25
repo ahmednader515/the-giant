@@ -52,20 +52,26 @@ export default async function CourseIdPage({
         return redirect("/dashboard");
     }
 
-    const requiredFields = [
-        course.title,
-        course.description,
-        course.imageUrl,
-        course.price,
-        course.chapters.some(chapter => chapter.isPublished)
+    const hasPublishedChapter = course.chapters.some(
+        (chapter) => chapter.isPublished
+    );
+    const hasPriceSet =
+        course.price !== null && course.price !== undefined;
+
+    const completionChecks = [
+        !!course.title,
+        !!course.description,
+        !!course.imageUrl,
+        hasPriceSet,
+        hasPublishedChapter,
     ];
 
-    const totalFields = requiredFields.length;
-    const completedFields = requiredFields.filter(Boolean).length;
+    const totalFields = completionChecks.length;
+    const completedFields = completionChecks.filter(Boolean).length;
 
     const completionText = `(${completedFields}/${totalFields})`;
 
-    const isComplete = requiredFields.every(Boolean);
+    const isComplete = completionChecks.every(Boolean);
 
     // Create detailed completion status
     const completionStatus = {
