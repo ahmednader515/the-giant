@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: Request) {
     try {
-        const { userId } = await auth()
+        const session = await getServerSession(authOptions);
+        const userId = session?.user?.id;
         const { title } = await req.json();
 
         if(!userId) {
@@ -30,20 +32,24 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const includeProgress = searchParams.get('includeProgress') === 'true';
-    
-    // Try to get user, but don't fail if not authenticated
-    let userId = null;
-    try {
-      const authResult = await auth();
-      userId = authResult.userId;
-    } catch (error) {
-      // User is not authenticated, which is fine for the home page
-      console.log("User not authenticated, showing courses without progress");
-    }
+
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id ?? null;
+
+    const gradeFilter =
+      session?.user?.role === "USER" && userId
+        ? await db.user.findUnique({
+            where: { id: userId },
+            select: { grade: true },
+          })
+        : null;
 
     const courses = await db.course.findMany({
       where: {
         isPublished: true,
+        ...(session?.user?.role === "USER" && gradeFilter?.grade
+          ? { OR: [{ grade: null }, { grade: gradeFilter.grade }] }
+          : {}),
       },
       include: {
         user: true,

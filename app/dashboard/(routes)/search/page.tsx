@@ -8,6 +8,7 @@ import { BookOpen, Clock, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Course, Purchase } from "@prisma/client";
+import { Grade } from "@prisma/client";
 
 type CourseWithDetails = Course & {
     chapters: { id: string }[];
@@ -29,12 +30,20 @@ export default async function SearchPage({
     const resolvedParams = await searchParams;
     const title = typeof resolvedParams.title === 'string' ? resolvedParams.title : '';
 
+    const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { grade: true, role: true },
+    });
+
     const courses = await db.course.findMany({
         where: {
             isPublished: true,
             title: {
                 contains: title,
-            }
+            },
+            ...(user?.role === "USER" && user?.grade
+                ? { OR: [{ grade: null }, { grade: user.grade as Grade }] }
+                : {}),
         },
         include: {
             chapters: {

@@ -8,22 +8,15 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Play, Clock, Trophy, Wallet, TrendingUp, BookOpen as BookOpenIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { Course, Purchase, Chapter } from "@prisma/client";
+import { Course, Purchase } from "@prisma/client";
+import { StudentGradeCard } from "@/app/dashboard/_components/student-grade-card";
+import type { GradeValue } from "@/lib/grades";
 
 type CourseWithProgress = Course & {
   chapters: { id: string }[];
   quizzes: { id: string }[];
   purchases: Purchase[];
   progress: number;
-}
-
-type LastWatchedChapter = {
-  id: string;
-  title: string;
-  courseId: string;
-  courseTitle: string;
-  courseImageUrl: string | null;
-  position: number;
 }
 
 type StudentStats = {
@@ -51,7 +44,7 @@ const CoursesPage = async () => {
   // Get user's current balance
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { balance: true }
+    select: { balance: true, grade: true }
   });
 
   // Get last watched chapter
@@ -252,6 +245,12 @@ const CoursesPage = async () => {
         <h1 className="text-3xl font-bold mb-2">مرحباً بك في لوحة التحكم</h1>
         <p className="text-muted-foreground">طريقك للنجاح و التفوق</p>
       </div>
+
+      {/* Grade warning/prompt */}
+      <StudentGradeCard
+        initialGrade={(user?.grade ?? null) as GradeValue | null}
+        variant="warning"
+      />
 
       {/* Stats and Balance Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

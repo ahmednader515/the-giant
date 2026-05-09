@@ -8,9 +8,9 @@ import Image from "next/image";
 import { Navbar } from "@/components/navbar";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { useEffect, useState } from "react";
-import { db } from "@/lib/db"; // Import db client
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { GRADE_OPTIONS, type GradeValue } from "@/lib/grades";
 
 // Define types based on Prisma schema
 type Course = {
@@ -21,6 +21,7 @@ type Course = {
   imageUrl?: string | null;
   price?: number | null;
   isPublished: boolean;
+  grade?: GradeValue | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -314,7 +315,7 @@ export default function HomePage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="flex flex-wrap justify-center gap-6"
+            className="space-y-14"
           >
             {isLoading ? (
               // Loading skeleton
@@ -353,56 +354,87 @@ export default function HomePage() {
                   </div>
                 </div>
               ) : (
-                courses.map((course, index) => (
-                  <motion.div
-                    key={course.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-100px" }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="group w-full sm:w-80 md:w-72 lg:w-80 bg-card rounded-xl overflow-hidden border shadow-sm hover:shadow-md transition-all"
-                  >
-                    <div className="relative w-full aspect-video">
-                      <Image
-                        src={course.imageUrl || "/placeholder.png"}
-                        alt={course.title}
-                        fill
-                        className="object-cover rounded-t-xl"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold mb-2 line-clamp-2">
-                        {course.title}
-                      </h3>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                        <BookOpen className="h-4 w-4" />
-                        <span>
-                          {course.chapters?.length || 0} {course.chapters?.length === 1 ? "فصل" : "فصول"}
-                          {course.quizzes && course.quizzes.length > 0 && (
-                            <span className="mr-2">، {course.quizzes.length} {course.quizzes.length === 1 ? "اختبار" : "اختبارات"}</span>
-                          )}
-                        </span>
+                GRADE_OPTIONS.map((gradeOption, gradeIndex) => {
+                  const gradeCourses = courses.filter((c) => {
+                    const g = (c as unknown as { grade?: GradeValue | null }).grade ?? null;
+                    return g === null || g === gradeOption.value;
+                  });
+
+                  return (
+                    <div key={gradeOption.value} className="space-y-6">
+                      <div className="flex items-end justify-between gap-4 flex-wrap">
+                        <div>
+                          <h3 className="text-2xl font-bold">{gradeOption.label}</h3>
+                          <p className="text-muted-foreground text-sm mt-1">
+                            الكورسات المخصصة لهذا الصف
+                          </p>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {gradeCourses.length} كورس
+                        </div>
                       </div>
-                      <Button 
-                        className="w-full bg-brand hover:bg-brand/90 text-white" 
-                        variant="default"
-                        onClick={() => {
-                          if (!session?.user) {
-                            router.push("/sign-in");
-                            return;
-                          }
-                          const courseUrl = course.chapters && course.chapters.length > 0 
-                            ? `/courses/${course.id}/chapters/${course.chapters[0].id}` 
-                            : `/courses/${course.id}`;
-                          router.push(courseUrl);
-                        }}
-                      >
-                        {course.progress === 100 ? "عرض الكورس" : "عرض الكورس"}
-                      </Button>
+
+                      {gradeCourses.length === 0 ? (
+                        <div className="text-sm text-muted-foreground bg-card border rounded-xl p-6 text-center">
+                          لا توجد كورسات لهذا الصف حالياً
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {gradeCourses.map((course, index) => (
+                            <motion.div
+                              key={course.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, margin: "-100px" }}
+                              transition={{ duration: 0.5, delay: (gradeIndex * 0.05) + (index * 0.05) }}
+                              className="group bg-card rounded-xl overflow-hidden border shadow-sm hover:shadow-md transition-all"
+                            >
+                              <div className="relative w-full aspect-video">
+                                <Image
+                                  src={course.imageUrl || "/placeholder.png"}
+                                  alt={course.title}
+                                  fill
+                                  className="object-cover rounded-t-xl"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <div className="p-4">
+                                <h3 className="text-lg font-semibold mb-2 line-clamp-2">
+                                  {course.title}
+                                </h3>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                                  <BookOpen className="h-4 w-4" />
+                                  <span>
+                                    {course.chapters?.length || 0} {course.chapters?.length === 1 ? "فصل" : "فصول"}
+                                    {course.quizzes && course.quizzes.length > 0 && (
+                                      <span className="mr-2">، {course.quizzes.length} {course.quizzes.length === 1 ? "اختبار" : "اختبارات"}</span>
+                                    )}
+                                  </span>
+                                </div>
+                                <Button
+                                  className="w-full bg-brand hover:bg-brand/90 text-white"
+                                  variant="default"
+                                  onClick={() => {
+                                    if (!session?.user) {
+                                      router.push("/sign-in");
+                                      return;
+                                    }
+                                    const courseUrl = course.chapters && course.chapters.length > 0
+                                      ? `/courses/${course.id}/chapters/${course.chapters[0].id}`
+                                      : `/courses/${course.id}`;
+                                    router.push(courseUrl);
+                                  }}
+                                >
+                                  عرض الكورس
+                                </Button>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </motion.div>
-                ))
+                  );
+                })
               )
             )}
           </motion.div>

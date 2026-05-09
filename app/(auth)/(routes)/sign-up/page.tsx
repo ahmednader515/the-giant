@@ -11,6 +11,8 @@ import axios, { AxiosError } from "axios";
 import { Check, X, Eye, EyeOff, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import ReCAPTCHA from "react-google-recaptcha";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { GRADE_OPTIONS, type GradeValue } from "@/lib/grades";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function SignUpPage() {
     fullName: "",
     phoneNumber: "",
     parentPhoneNumber: "",
+    grade: "" as GradeValue | "",
     password: "",
     confirmPassword: "",
   });
@@ -32,6 +35,13 @@ export default function SignUpPage() {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleGradeChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      grade: value as GradeValue,
     }));
   };
 
@@ -191,6 +201,23 @@ export default function SignUpPage() {
                 placeholder="+20XXXXXXXXXX"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="grade">الصف الدراسي</Label>
+              <Select value={formData.grade} onValueChange={handleGradeChange} disabled={isLoading}>
+                <SelectTrigger id="grade" className="h-10">
+                  <SelectValue placeholder="اختر الصف الدراسي" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GRADE_OPTIONS.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="password">كلمة المرور</Label>
               <div className="relative">
@@ -278,7 +305,7 @@ export default function SignUpPage() {
             <Button
               type="submit"
               className="w-full h-10 bg-brand hover:bg-brand/90 text-white"
-              disabled={isLoading || !passwordChecks.isValid || !recaptchaToken}
+              disabled={isLoading || !passwordChecks.isValid || !recaptchaToken || !formData.grade}
             >
               {isLoading ? "جاري إنشاء الحساب..." : "إنشاء حساب"}
             </Button>

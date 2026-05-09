@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { isGradeValue } from "@/lib/grades";
 
 async function verifyRecaptcha(token: string): Promise<boolean> {
   const secretKey = process.env.RECAPTCHA_SECRET_KEY;
@@ -29,10 +30,14 @@ async function verifyRecaptcha(token: string): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
-    const { fullName, phoneNumber, parentPhoneNumber, password, confirmPassword, recaptchaToken } = await req.json();
+    const { fullName, phoneNumber, parentPhoneNumber, grade, password, confirmPassword, recaptchaToken } = await req.json();
 
-    if (!fullName || !phoneNumber || !parentPhoneNumber || !password || !confirmPassword) {
+    if (!fullName || !phoneNumber || !parentPhoneNumber || !password || !confirmPassword || !grade) {
       return new NextResponse("Missing required fields", { status: 400 });
+    }
+
+    if (!isGradeValue(grade)) {
+      return new NextResponse("Invalid grade", { status: 400 });
     }
 
     // Verify reCAPTCHA token
@@ -82,6 +87,7 @@ export async function POST(req: Request) {
         fullName,
         phoneNumber,
         parentPhoneNumber,
+        grade,
         hashedPassword,
         role: "USER",
       },

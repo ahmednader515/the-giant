@@ -7,6 +7,7 @@ import { TitleForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_
 import { DescriptionForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/description-form";
 import { ImageForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/image-form";
 import { PriceForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/price-form";
+import { GradeForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/grade-form";
 import { CourseContentForm } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/course-content-form";
 import { Banner } from "@/components/banner";
 import { Actions } from "@/app/dashboard/(routes)/teacher/courses/[courseId]/_components/actions";
@@ -146,6 +147,10 @@ export default async function AdminCourseIdPage({
                         />
                         <DescriptionForm
                             initialData={course}
+                            courseId={course.id}
+                        />
+                        <GradeForm
+                            initialData={{ grade: (course.grade ?? null) as unknown as import("@/lib/grades").GradeValue | null }}
                             courseId={course.id}
                         />
                         <PriceForm
