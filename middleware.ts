@@ -27,6 +27,12 @@ export default withAuth(
     // Add check for payment status page
     const isPaymentStatusPage = req.nextUrl.pathname.includes("/payment-status");
 
+    const isPublicChapterRoute =
+      /^\/courses\/[^/]+\/chapters\/[^/]+$/.test(req.nextUrl.pathname) &&
+      req.nextUrl.searchParams.has("public");
+
+    const isShortChapterLink = /^\/s\/[^/]+$/.test(req.nextUrl.pathname);
+
     // If user is on auth page and is authenticated, redirect to appropriate dashboard
     if (isAuthPage && req.nextauth.token) {
       const userRole = req.nextauth.token?.role || "USER";
@@ -36,7 +42,7 @@ export default withAuth(
 
     // If user is not authenticated and trying to access protected routes
     // But exclude payment status page from this check
-    if (!req.nextauth.token && !isAuthPage && !isPaymentStatusPage) {
+    if (!req.nextauth.token && !isAuthPage && !isPaymentStatusPage && !isPublicChapterRoute && !isShortChapterLink) {
       return NextResponse.redirect(new URL("/sign-in", req.url), { status: 302 });
     }
 

@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import {
+  ensureChapterPublicAccess,
+  getChapterByPublicToken,
+  getPublicTokenFromRequest,
+} from "@/lib/chapter-public-access";
 
 export async function GET(
   req: Request,
@@ -9,8 +14,30 @@ export async function GET(
   try {
     const resolvedParams = await params;
     const { courseId, chapterId } = resolvedParams;
-    
+    const publicToken = getPublicTokenFromRequest(req);
     const { userId } = await auth();
+
+    if (publicToken) {
+      const publicChapter = await getChapterByPublicToken(
+        courseId,
+        chapterId,
+        publicToken
+      );
+
+      if (!publicChapter) {
+        return new NextResponse("Chapter not found", { status: 404 });
+      }
+
+      return NextResponse.json({
+        ...publicChapter,
+        userProgress: [],
+        nextChapterId: null,
+        previousChapterId: null,
+        nextContentType: null,
+        previousContentType: null,
+        isPublicView: true,
+      });
+    }
 
     if (!userId) {
       return new NextResponse("Unauthorized", { status: 401 });
@@ -95,8 +122,18 @@ export async function GET(
       ? sortedContent[currentIndex - 1] 
       : null;
 
+    const publicAccess =
+      chapter.publicAccessToken && chapter.publicShortCode
+        ? {
+            publicAccessToken: chapter.publicAccessToken,
+            publicShortCode: chapter.publicShortCode,
+          }
+        : await ensureChapterPublicAccess(chapterId);
+
     const response = {
       ...chapter,
+      publicAccessToken: publicAccess?.publicAccessToken ?? chapter.publicAccessToken,
+      publicShortCode: publicAccess?.publicShortCode ?? chapter.publicShortCode,
       nextChapterId: nextContent?.id || null,
       previousChapterId: previousContent?.id || null,
       nextContentType: nextContent?.type || null,

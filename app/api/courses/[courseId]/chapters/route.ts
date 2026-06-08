@@ -1,6 +1,8 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { generateShortCode } from "@/lib/chapter-public-access";
 
 export async function GET(
   req: Request,
@@ -77,6 +79,8 @@ export async function POST(
                 title,
                 courseId: resolvedParams.courseId,
                 position: newPosition,
+                publicAccessToken: randomUUID(),
+                publicShortCode: generateShortCode(),
             }
         });
 

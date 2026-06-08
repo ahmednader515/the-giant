@@ -1,14 +1,52 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import {
+  getChapterByPublicToken,
+  getPublicTokenFromRequest,
+} from "@/lib/chapter-public-access";
 
 export async function GET(
     req: Request,
     { params }: { params: Promise<{ courseId: string; chapterId: string }> }
 ) {
     try {
-        const { userId } = await auth();
         const resolvedParams = await params;
+        const publicToken = getPublicTokenFromRequest(req);
+        const { userId } = await auth();
+
+        if (publicToken) {
+            const publicChapter = await getChapterByPublicToken(
+                resolvedParams.courseId,
+                resolvedParams.chapterId,
+                publicToken
+            );
+
+            if (!publicChapter?.documentUrl) {
+                return new NextResponse("Document not found", { status: 404 });
+            }
+
+            const response = await fetch(publicChapter.documentUrl);
+            if (!response.ok) {
+                return new NextResponse("Failed to fetch document", { status: 500 });
+            }
+
+            const fileBuffer = await response.arrayBuffer();
+            const contentType = response.headers.get("content-type") || "application/octet-stream";
+            const filename = publicChapter.documentName || "document";
+            const asciiFallback = filename.replace(/[^\x20-\x7E]/g, "_");
+            const encodedFilename = encodeURIComponent(filename);
+
+            return new NextResponse(fileBuffer, {
+                status: 200,
+                headers: {
+                    "Content-Type": contentType,
+                    "Content-Length": String(fileBuffer.byteLength),
+                    "Content-Disposition": `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`,
+                    "Cache-Control": "no-cache",
+                },
+            });
+        }
 
         if (!userId) {
             return new NextResponse("Unauthorized", { status: 401 });

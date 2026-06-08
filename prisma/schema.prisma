@@ -86,6 +86,8 @@ model Chapter {
   position Int
   isPublished Boolean @default(false)
   isFree Boolean @default(false)
+  publicAccessToken String? @unique
+  publicShortCode String? @unique
 
   courseId String
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)

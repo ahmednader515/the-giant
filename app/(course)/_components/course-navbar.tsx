@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LoadingButton } from "@/components/ui/loading-button";
 import { ChevronRight, LogOut } from "lucide-react";
@@ -9,7 +10,7 @@ import { UserButton } from "@/components/user-button";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 
-export const CourseNavbar = () => {
+export const CourseNavbar = ({ isPublicView = false }: { isPublicView?: boolean }) => {
   const router = useRouter();
   const { data: session } = useSession();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -28,24 +29,31 @@ export const CourseNavbar = () => {
   };
 
   const handleBackToDashboard = () => {
-    router.push("/dashboard");
+    router.push(isPublicView ? "/" : "/dashboard");
   };
 
   return (
     <div className="p-4 h-full flex items-center bg-card text-foreground border-b shadow-sm">
       <div className="flex items-center">
-        <CourseMobileSidebar />
+        {!isPublicView && <CourseMobileSidebar />}
         <Button
           onClick={handleBackToDashboard}
           variant="ghost"
           size="sm"
           className="flex items-center gap-x-2 hover:bg-slate-100 rtl:mr-2 ltr:ml-2"
         >
-          <span className="rtl:text-right ltr:text-left">الرجوع إلى الكورسات</span>
+          <span className="rtl:text-right ltr:text-left">
+            {isPublicView ? "الرجوع إلى الصفحة الرئيسية" : "الرجوع إلى الكورسات"}
+          </span>
           <ChevronRight className="h-4 w-4 rtl:rotate-180" />
         </Button>
       </div>
       <div className="flex items-center gap-x-4 rtl:mr-auto ltr:ml-auto">
+        {isPublicView && !session?.user && (
+          <Button asChild size="sm" className="bg-brand hover:bg-brand/90 text-white">
+            <Link href="/sign-in">تسجيل الدخول</Link>
+          </Button>
+        )}
         {session?.user && (
           <LoadingButton 
             size="sm" 
@@ -59,7 +67,7 @@ export const CourseNavbar = () => {
             تسجيل الخروج
           </LoadingButton>
         )}
-        <UserButton />
+        {!isPublicView && <UserButton />}
       </div>
     </div>
   );

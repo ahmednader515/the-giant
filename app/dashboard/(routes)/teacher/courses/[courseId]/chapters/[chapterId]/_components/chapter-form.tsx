@@ -24,6 +24,7 @@ import { Editor } from "@/components/editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { IconBadge } from "@/components/icon-badge";
 import { AttachmentsForm } from "./attachments-form";
+import { ChapterPublicLink } from "@/components/chapter-public-link";
 
 interface ChapterAttachment {
     id: string;
@@ -39,6 +40,8 @@ interface ChapterFormProps {
         description: string | null;
         isFree: boolean;
         isPublished: boolean;
+        publicAccessToken: string | null;
+        publicShortCode: string | null;
         attachments: ChapterAttachment[];
     };
     courseId: string;
@@ -189,6 +192,12 @@ export const ChapterForm = ({
 
     return (
         <div className="space-y-10">
+            {initialData.publicShortCode && (
+                <ChapterPublicLink
+                    publicShortCode={initialData.publicShortCode}
+                    isPublished={initialData.isPublished}
+                />
+            )}
             <div className="flex items-center gap-x-2">
                 <IconBadge icon={LayoutDashboard} />
                 <h2 className="text-xl">

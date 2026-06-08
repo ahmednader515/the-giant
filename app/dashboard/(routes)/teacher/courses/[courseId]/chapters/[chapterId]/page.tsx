@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { ensureChapterPublicAccess } from "@/lib/chapter-public-access";
 import { ChapterForm } from "./_components/chapter-form";
 import { VideoForm } from "./_components/video-form";
 import Link from "next/link";
@@ -40,6 +41,13 @@ export default async function ChapterPage({
         return redirect("/");
     }
 
+    const publicAccess = await ensureChapterPublicAccess(chapterId);
+    const chapterWithToken = {
+        ...chapter,
+        publicAccessToken: publicAccess?.publicAccessToken ?? null,
+        publicShortCode: publicAccess?.publicShortCode ?? null,
+    };
+
     const requiredFields = [
         chapter.title,
         chapter.description,
@@ -78,7 +86,7 @@ export default async function ChapterPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-16">
                 <div>
                     <ChapterForm
-                        initialData={chapter}
+                        initialData={chapterWithToken}
                         courseId={courseId}
                         chapterId={chapterId}
                     />

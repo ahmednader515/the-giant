@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import axios, { AxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, Lock, FileText, Download } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { PlyrVideoPlayer } from "@/components/plyr-video-player";
+import { ChapterPublicLink } from "@/components/chapter-public-link";
 
 interface Chapter {
   id: string;
@@ -23,6 +24,9 @@ interface Chapter {
   previousChapterId?: string;
   nextContentType?: 'chapter' | 'quiz' | null;
   previousContentType?: 'chapter' | 'quiz' | null;
+  publicAccessToken?: string | null;
+  publicShortCode?: string | null;
+  isPublicView?: boolean;
   attachments?: {
     id: string;
     name: string;
@@ -38,6 +42,9 @@ interface Chapter {
 const ChapterPage = () => {
   const router = useRouter();
   const routeParams = useParams() as { courseId: string; chapterId: string };
+  const searchParams = useSearchParams();
+  const publicToken = searchParams.get("public");
+  const isPublicView = !!publicToken;
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [loading, setLoading] = useState(true);
   const [isCompleted, setIsCompleted] = useState(false);
@@ -77,7 +84,9 @@ const ChapterPage = () => {
   // Helper function to download document
   const downloadDocument = async (url: string) => {
     try {
-      const relative = `/api/courses/${routeParams.courseId}/chapters/${routeParams.chapterId}/document/download`;
+      const relative = `/api/courses/${routeParams.courseId}/chapters/${routeParams.chapterId}/document/download${
+        publicToken ? `?public=${publicToken}` : ""
+      }`;
       const absoluteUrl = typeof window !== 'undefined' ? new URL(relative, window.location.origin).toString() : relative;
       // Navigate directly to the download URL (more reliable for Android WebViews)
       window.location.href = absoluteUrl;
@@ -141,8 +150,21 @@ const ChapterPage = () => {
     const fetchData = async () => {
       console.log("🔍 ChapterPage fetchData started");
       try {
+        const chapterUrl = `/api/courses/${routeParams.courseId}/chapters/${routeParams.chapterId}${
+          publicToken ? `?public=${publicToken}` : ""
+        }`;
+
+        if (isPublicView) {
+          const chapterResponse = await axios.get(chapterUrl);
+          setChapter(chapterResponse.data);
+          setHasAccess(true);
+          setCourseProgress(0);
+          setIsCompleted(false);
+          return;
+        }
+
         const [chapterResponse, progressResponse, accessResponse] = await Promise.all([
-          axios.get(`/api/courses/${routeParams.courseId}/chapters/${routeParams.chapterId}`),
+          axios.get(chapterUrl),
           axios.get(`/api/courses/${routeParams.courseId}/progress`),
           axios.get(`/api/courses/${routeParams.courseId}/access`)
         ]);
@@ -177,7 +199,7 @@ const ChapterPage = () => {
     };
 
     fetchData();
-  }, [routeParams.courseId, routeParams.chapterId]);
+  }, [routeParams.courseId, routeParams.chapterId, publicToken, isPublicView]);
 
   const toggleCompletion = async () => {
     try {
@@ -243,7 +265,7 @@ const ChapterPage = () => {
     );
   }
 
-  if (!hasAccess && !chapter.isFree) {
+  if (!isPublicView && !hasAccess && !chapter.isFree) {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -262,14 +284,22 @@ const ChapterPage = () => {
     <div className="h-full">
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex flex-col gap-8">
-          {/* Course Progress */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">التقدم</span>
-              <span className="text-sm font-medium">{courseProgress}%</span>
+          {!isPublicView && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">التقدم</span>
+                <span className="text-sm font-medium">{courseProgress}%</span>
+              </div>
+              <Progress value={courseProgress} className="h-2" />
             </div>
-            <Progress value={courseProgress} className="h-2" />
-          </div>
+          )}
+
+          {!isPublicView && chapter.publicShortCode && (
+            <ChapterPublicLink
+              publicShortCode={chapter.publicShortCode}
+              isPublished
+            />
+          )}
 
           {/* Video Player Section */}
           <div className="aspect-video relative bg-black rounded-lg overflow-hidden">
@@ -307,25 +337,27 @@ const ChapterPage = () => {
 
           {/* Chapter Information */}
           <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <h1 className="text-2xl font-bold">{chapter.title}</h1>
-              <Button
-                variant="outline"
-                onClick={toggleCompletion}
-                className="flex items-center gap-2"
-              >
-                {isCompleted ? (
-                  <>
-                    <span>لم يتم الإكمال</span>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                  </>
-                ) : (
-                  <>
-                    <span>تم الإكمال</span>
-                    <Circle className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
+              {!isPublicView && (
+                <Button
+                  variant="outline"
+                  onClick={toggleCompletion}
+                  className="flex items-center gap-2"
+                >
+                  {isCompleted ? (
+                    <>
+                      <span>لم يتم الإكمال</span>
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </>
+                  ) : (
+                    <>
+                      <span>تم الإكمال</span>
+                      <Circle className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
             
             <div className="prose max-w-none">
@@ -411,7 +443,7 @@ const ChapterPage = () => {
             )}
           </div>
 
-          {/* Navigation Buttons */}
+          {!isPublicView && (
           <div className="flex items-center justify-between mt-8">
             <Button
               variant="outline"
@@ -432,6 +464,7 @@ const ChapterPage = () => {
               <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
+          )}
         </div>
       </div>
     </div>
