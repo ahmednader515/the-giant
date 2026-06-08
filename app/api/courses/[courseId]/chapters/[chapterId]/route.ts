@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, getOptionalAuth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   ensureChapterPublicAccess,
@@ -15,7 +15,6 @@ export async function GET(
     const resolvedParams = await params;
     const { courseId, chapterId } = resolvedParams;
     const publicToken = getPublicTokenFromRequest(req);
-    const { userId } = await auth();
 
     if (publicToken) {
       const publicChapter = await getChapterByPublicToken(
@@ -39,9 +38,11 @@ export async function GET(
       });
     }
 
-    if (!userId) {
+    const authResult = await getOptionalAuth();
+    if (!authResult) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
+    const { userId } = authResult;
 
     const chapter = await db.chapter.findUnique({
       where: {

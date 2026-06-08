@@ -9,17 +9,27 @@ import bcrypt from "bcryptjs";
 import { prismaAdapter } from "@/lib/auth/prisma-adapter";
 import { SessionManager } from "@/lib/session-manager";
 
-export const auth = async () => {
+export const getOptionalAuth = async () => {
   const session = await getServerSession(authOptions);
 
-  if (!session?.user) {
-    redirect("/sign-in");
+  if (!session?.user?.id) {
+    return null;
   }
 
   return {
     userId: session.user.id,
     user: session.user,
   };
+};
+
+export const auth = async () => {
+  const session = await getOptionalAuth();
+
+  if (!session) {
+    redirect("/sign-in");
+  }
+
+  return session;
 };
 
 export const authOptions: AuthOptions = {

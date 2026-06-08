@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getOptionalAuth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
@@ -13,7 +13,6 @@ export async function GET(
     try {
         const resolvedParams = await params;
         const publicToken = getPublicTokenFromRequest(req);
-        const { userId } = await auth();
 
         if (publicToken) {
             const publicChapter = await getChapterByPublicToken(
@@ -48,9 +47,11 @@ export async function GET(
             });
         }
 
-        if (!userId) {
+        const authResult = await getOptionalAuth();
+        if (!authResult) {
             return new NextResponse("Unauthorized", { status: 401 });
         }
+        const { userId } = authResult;
 
         // Get the chapter with document URL
         const chapter = await db.chapter.findUnique({
